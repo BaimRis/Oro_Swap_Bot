@@ -1,5 +1,5 @@
 {
-  "name": "oroswap-auto-bot",
+  "name": "Oro_Swap_Bot",
   "version": "1.0.0",
   "description": "Automated trading bot for OroSwap DEX on Zig Network with swap and liquidity operations",
   "main": "index.js",
