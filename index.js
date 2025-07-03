@@ -344,7 +344,7 @@ function displayCountdown(hours, minutes, seconds) {
 }
 
 async function startDailyCountdown(keys, numTransactions) {
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; 
+  const TWENTY_FOUR_HOURS = 15 * 60 * 1000; 
 
   while (true) {
 
@@ -353,7 +353,6 @@ async function startDailyCountdown(keys, numTransactions) {
 
     while (Date.now() < endTime) {
       const remaining = endTime - Date.now();
-      const hours = Math.floor(remaining / (1000 * 60 * 60));
       const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
 
@@ -363,7 +362,7 @@ async function startDailyCountdown(keys, numTransactions) {
     }
 
     console.log('\n');
-    logger.success('⏰ 24 hours completed! Starting new transaction cycle...\n');
+    logger.success('⏰ 15 Minutes completed! Starting new transaction cycle...\n');
 
     await executeAllWallets(keys, numTransactions);
   }
