@@ -51,11 +51,6 @@ const DENOM_ZIG = 'uzig';
 
 const ORO_CONTRACT = 'zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr';
 
-const LIQUIDITY_ORO_AMOUNT = 1; 
-const LIQUIDITY_ZIG_AMOUNT = 0.495169; 
-
-const BELIEF_PRICE_ORO_TO_ZIG = "1.982160555004955471"; 
-
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -176,6 +171,34 @@ function calculateBeliefPrice(poolInfo, fromDenom) {
     return fromDenom === DENOM_ZIG ? "0.5" : BELIEF_PRICE_ORO_TO_ZIG;
   }
 }
+async function getRealtimeLiquidityAmounts() {
+  const poolInfo = await getPoolInfo(ORO_ZIG_CONTRACT);
+  if (!poolInfo) {
+    return { oroAmount: 1, zigAmount: 0.5 }; // fallback
+  }
+
+  const asset1 = poolInfo.assets[0];
+  const asset2 = poolInfo.assets[1];
+
+  const asset1Denom = asset1.info.native_token?.denom;
+  const asset2Denom = asset2.info.native_token?.denom;
+
+  let oroAmount, zigAmount;
+
+  if (asset1Denom === DENOM_ORO) {
+    oroAmount = parseFloat(asset1.amount) / 1_000_000;
+    zigAmount = parseFloat(asset2.amount) / 1_000_000;
+  } else {
+    oroAmount = parseFloat(asset2.amount) / 1_000_000;
+    zigAmount = parseFloat(asset1.amount) / 1_000_000;
+  }
+
+  // Gunakan 0.01% dari total pool untuk tambah likuiditas
+  return {
+    oroAmount: (oroAmount * 0.0001).toFixed(6),
+    zigAmount: (zigAmount * 0.0001).toFixed(6),
+  };
+}
 
 async function performSwap(wallet, address, amount, fromDenom, swapNumber) {
   try {
@@ -231,9 +254,12 @@ async function performSwap(wallet, address, amount, fromDenom, swapNumber) {
 
 async function addLiquidity(wallet, address) {
   try {
+    const { oroAmount, zigAmount } = await getRealtimeLiquidityAmounts();
+
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
-    const microAmountORO = toMicroUnits(LIQUIDITY_ORO_AMOUNT, DENOM_ORO);
-    const microAmountZIG = toMicroUnits(LIQUIDITY_ZIG_AMOUNT, DENOM_ZIG);
+
+    const microAmountORO = toMicroUnits(oroAmount, DENOM_ORO);
+    const microAmountZIG = toMicroUnits(zigAmount, DENOM_ZIG);
 
     const msg = {
       provide_liquidity: {
@@ -250,7 +276,7 @@ async function addLiquidity(wallet, address) {
       { denom: DENOM_ZIG, amount: microAmountZIG.toString() }
     ];
 
-    logger.loading(`Adding liquidity: ${LIQUIDITY_ORO_AMOUNT} ORO + ${LIQUIDITY_ZIG_AMOUNT} ZIG`);
+    logger.loading(`Adding liquidity: ${oroAmount} ORO + ${zigAmount} ZIG`);
     const result = await client.execute(address, ORO_ZIG_CONTRACT, msg, 'auto', 'Adding pool Liquidity', funds);
     logger.success(`Liquidity added! Tx: ${EXPLORER_URL}${result.transactionHash}`);
     return result;
@@ -338,7 +364,7 @@ async function getPoints(address) {
   }
 }
 
-function displayCountdown(hours, minutes, seconds) {
+function displayCountdown(0, minutes, seconds) {
   const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   process.stdout.write(`\r${colors.cyan}[⏰] Next execution in: ${timeStr}${colors.reset}`);
 }
